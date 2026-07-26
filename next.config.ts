@@ -58,6 +58,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.up.railway.app",
       },
+      {
+        // Render production deployment (Laravel API)
+        protocol: "https",
+        hostname: "*.onrender.com",
+      },
+      {
+        // Vercel deployment (self)
+        protocol: "https",
+        hostname: "*.vercel.app",
+      },
     ],
   },
 
