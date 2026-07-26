@@ -68,6 +68,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.vercel.app",
       },
+      {
+        // Netlify deployment (self)
+        protocol: "https",
+        hostname: "*.netlify.app",
+      },
     ],
   },
 
