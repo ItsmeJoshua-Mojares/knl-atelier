@@ -127,7 +127,9 @@ export default function CheckoutPage() {
   }
 
   if (items.length === 0) {
-    router.replace("/cart");
+    if (typeof window !== "undefined") {
+      router.replace("/cart");
+    }
     return null;
   }
 
