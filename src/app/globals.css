@@ -1,0 +1,150 @@
+/* src/app/globals.css
+ * ─────────────────────────────────────────────────────────────
+ * This file does THREE things:
+ *
+ * 1. @tailwind directives — these lines are replaced by Tailwind's
+ *    compiled CSS when you run `npm run dev`. Don't remove them.
+ *
+ * 2. CSS custom properties (variables) — values that need to be
+ *    accessible inside raw CSS or inline styles.
+ *
+ * 3. Base resets — sensible defaults for every HTML element.
+ * ─────────────────────────────────────────────────────────────
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+/* ── CSS Variables ────────────────────────────────────────── */
+/* These are available anywhere via var(--color-gold) etc.    */
+:root {
+  --color-gold:         #c9a84c;
+  --color-green-mid:    #2d6a35;
+  --color-green-light:  #5cb85c;
+  --transition-base:    0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Base Resets ──────────────────────────────────────────── */
+@layer base {
+  /* Smooth scrolling for anchor links */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Dark background on every page — prevents white flash */
+  body {
+    @apply bg-dark text-white font-body;
+    -webkit-font-smoothing: antialiased;  /* Sharper text on Mac */
+    overflow-x: hidden;                   /* No horizontal scroll */
+  }
+
+  /* Remove default list styles */
+  ul, ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Images never overflow their container */
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Remove default button styles */
+  button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+
+  /* Remove default link underline */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+/* ── Reusable Component Classes ───────────────────────────── */
+/* @layer components lets you create classes that work like    */
+/* Tailwind utilities but are defined by you.                  */
+@layer components {
+
+  /* Container — max width centered with padding */
+  .knl-container {
+    @apply w-full max-w-7xl mx-auto px-6;
+  }
+
+  /* Section label — small uppercase text above headings */
+  /* Example usage: <span className="section-label">New Arrivals</span> */
+  .section-label {
+    @apply font-utility text-xs tracking-[4px] uppercase text-gold;
+  }
+
+  /* Section title — the big heading in each section */
+  .section-title {
+    @apply font-display text-4xl font-semibold text-white leading-tight;
+  }
+
+  /* Primary button — green, used for main CTAs */
+  .btn-primary {
+    @apply inline-flex items-center gap-2
+           bg-green-mid text-white
+           font-utility text-sm font-semibold tracking-widest uppercase
+           px-7 py-3 rounded-full
+           border border-green-light
+           transition-all duration-300
+           hover:bg-green-accent hover:-translate-y-0.5
+           hover:shadow-[0_8px_24px_rgba(61,139,70,0.4)];
+  }
+
+  /* Ghost button — transparent with white border */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2
+           bg-transparent text-white
+           font-utility text-sm font-semibold tracking-widest uppercase
+           px-7 py-3 rounded-full
+           border border-white/30
+           transition-all duration-300
+           hover:border-white hover:bg-white/10;
+  }
+
+  /* Gold button — used for premium CTAs */
+  .btn-gold {
+    @apply inline-flex items-center gap-2
+           bg-gold text-dark
+           font-utility text-xs font-bold tracking-widest uppercase
+           px-5 py-2.5 rounded
+           transition-all duration-300
+           hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.45)];
+  }
+
+  /* Loading skeleton — animated placeholder while data loads */
+  .skeleton {
+    @apply bg-white/5 rounded animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.04) 25%,
+      rgba(255,255,255,0.08) 50%,
+      rgba(255,255,255,0.04) 75%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+/* ── Utility Overrides ────────────────────────────────────── */
+@layer utilities {
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

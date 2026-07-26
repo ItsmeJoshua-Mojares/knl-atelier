@@ -1,0 +1,21 @@
+{
+  "name": "KNL Atelier & Co.",
+  "short_name": "KNL Atelier",
+  "description": "Authentic luxury watches, fragrances, shoes and accessories in the Philippines.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0e0e",
+  "theme_color": "#2d6a35",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
