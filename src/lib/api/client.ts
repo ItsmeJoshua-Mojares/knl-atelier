@@ -204,7 +204,7 @@ export const adminApi = {
   // Products
   products: {
     list: (params?: {
-      search?: string; category_id?: number; status?: string;
+      search?: string; category_id?: number; status?: string; trashed?: boolean;
       sort_by?: string; sort_dir?: "asc" | "desc"; page?: number; per_page?: number;
     }) => apiClient.get("/admin/products", { params }),
 
@@ -252,6 +252,10 @@ export const adminApi = {
 
     setPrimaryImage: (productId: number, imageId: number) =>
       apiClient.put(`/admin/products/${productId}/images/${imageId}/set-primary`),
+
+    restore: (id: number) => apiClient.put(`/admin/products/${id}/restore`),
+
+    forceDelete: (id: number) => apiClient.delete(`/admin/products/${id}/force-delete`),
   },
 
   // Categories

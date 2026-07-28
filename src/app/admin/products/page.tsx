@@ -28,6 +28,7 @@ interface Product {
   condition_status?: string;
   specifications?: Record<string, string> | string;
   images?: ProductImage[];
+  deleted_at?: string | null;
 }
 
 interface PaginatedResponse {
@@ -64,7 +65,14 @@ export default function AdminProductsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await adminApi.products.list({ search, status: statusFilter || undefined, page, per_page: 20 });
+      const isTrashed = statusFilter === "trashed";
+      const params: Record<string, unknown> = { search, page, per_page: 20 };
+      if (isTrashed) {
+        params.trashed = true;
+      } else if (statusFilter) {
+        params.status = statusFilter;
+      }
+      const r = await adminApi.products.list(params as any);
       setRes(r.data.data);
     } finally { setLoading(false); }
   }, [search, statusFilter, page]);
@@ -269,9 +277,20 @@ export default function AdminProductsPage() {
       key: "actions", header: "",
       render: (p) => (
         <div className="flex gap-2">
-          <button onClick={() => openEdit(p)} className="text-[11px] font-utility font-semibold text-green-light hover:text-white border border-green-mid/30 hover:border-green-mid rounded-lg px-2.5 py-1 transition-all">
-            Edit
-          </button>
+          {p.deleted_at ? (
+            <>
+              <button onClick={async () => { if (!confirm("Restore this product?")) return; await adminApi.products.restore(p.id); load(); }} className="text-[11px] font-utility font-semibold text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 rounded-lg px-2.5 py-1 transition-all">
+                Restore
+              </button>
+              <button onClick={async () => { if (!confirm("Permanently delete this product? This cannot be undone.")) return; await adminApi.products.forceDelete(p.id); load(); }} className="text-[11px] font-utility font-semibold text-red-400 hover:text-white border border-red-500/30 hover:border-red-500 rounded-lg px-2.5 py-1 transition-all">
+                Delete
+              </button>
+            </>
+          ) : (
+            <button onClick={() => openEdit(p)} className="text-[11px] font-utility font-semibold text-green-light hover:text-white border border-green-mid/30 hover:border-green-mid rounded-lg px-2.5 py-1 transition-all">
+              Edit
+            </button>
+          )}
         </div>
       ),
     },
@@ -297,6 +316,7 @@ export default function AdminProductsPage() {
           <option value="inactive">Inactive</option>
           <option value="low_stock">Low Stock</option>
           <option value="out_of_stock">Out of Stock</option>
+          <option value="trashed">Trashed</option>
         </select>
       </AdminToolbar>
 
