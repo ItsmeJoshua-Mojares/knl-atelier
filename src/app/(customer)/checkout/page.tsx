@@ -16,13 +16,14 @@
 
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm }   from "react-hook-form";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/cartStore";
 import { formatPrice }  from "@/data/products";
-import { ordersApi, type CreateOrderPayload } from "@/lib/api/client";
+import { ordersApi, productsApi, type CreateOrderPayload } from "@/lib/api/client";
+import { apiProductToFrontend } from "@/lib/adapters";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -53,10 +54,13 @@ const PAYMENT_OPTIONS = [
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const buySlug = searchParams.get("buy");
   const [step, setStep] = useState<Step>(1);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [buyLoading, setBuyLoading] = useState(!!buySlug);
 
-  const { items, getSubtotal, couponDiscount, couponCode, clearCart } = useCartStore();
+  const { items, addItem, getSubtotal, couponDiscount, couponCode, clearCart } = useCartStore();
   const { user } = useAuthStore();
 
   const { register, handleSubmit, watch, trigger,
@@ -74,6 +78,32 @@ export default function CheckoutPage() {
   const tax       = subtotal * 0.12;
   const total     = subtotal - couponDiscount + shipping + tax;
   const payMethod = watch("payment_method");
+
+  // Handle ?buy=slug — fetch product and add to cart
+  useEffect(() => {
+    if (!buySlug) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await productsApi.show(buySlug);
+        const api = res.data.data?.product ?? res.data.data;
+        if (api && !cancelled) {
+          addItem(apiProductToFrontend(api));
+        }
+      } catch {
+        // product not found — will fall through to empty cart redirect
+      } finally {
+        if (!cancelled) {
+          setBuyLoading(false);
+          // Remove the ?buy= param from URL without reload
+          const url = new URL(window.location.href);
+          url.searchParams.delete("buy");
+          window.history.replaceState({}, "", url.toString());
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [buySlug, addItem]);
 
   // Validate current step fields before advancing
   async function handleNext() {
@@ -124,6 +154,14 @@ export default function CheckoutPage() {
       setOrderError(message);
       setIsPlacing(false);
     }
+  }
+
+  if (buyLoading) {
+    return (
+      <div className="knl-container py-10 min-h-screen flex items-center justify-center">
+        <p className="text-[13px] text-gray-mid">Adding item to cart…</p>
+      </div>
+    );
   }
 
   if (items.length === 0) {
