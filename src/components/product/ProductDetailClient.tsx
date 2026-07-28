@@ -18,13 +18,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/types";
 import { formatPrice }    from "@/data/products";
 import { useCartStore, useWishlistStore } from "@/store/cartStore";
+import { productsApi } from "@/lib/api/client";
 import ProductCard from "@/components/ui/ProductCard";
 
 interface Props {
@@ -356,7 +357,11 @@ export default function ProductDetailClient({ product, related }: Props) {
           )}
 
           {activeTab === "reviews" && (
-            <ReviewsTab rating={product.rating} count={product.reviewCount} />
+            <ReviewsTab
+              slug={product.slug}
+              rating={product.rating}
+              count={product.reviewCount}
+            />
           )}
         </div>
 
@@ -395,12 +400,82 @@ export default function ProductDetailClient({ product, related }: Props) {
 }
 
 // ── Reviews sub-component ─────────────────────────────────────
-function ReviewsTab({ rating, count }: { rating: number; count: number }) {
-  const sampleReviews = [
-    { name: "Miguel R.", location: "Quezon City", rating: 5, text: "100% authentic. Arrived perfectly boxed with full warranty card. KNL Atelier is legit!" },
-    { name: "Jana L.",   location: "Makati",       rating: 5, text: "Fast delivery. The watch looks exactly like the photos. Very happy with my purchase." },
-    { name: "Karl C.",   location: "Cebu City",    rating: 4, text: "Great customer service helped me decide between two models. Highly recommend." },
-  ];
+interface Review {
+  id: number;
+  rating: number;
+  title: string | null;
+  body: string;
+  is_verified: boolean;
+  created_at: string;
+  user: { id: number; first_name: string; last_name: string };
+}
+
+function ReviewsTab({ slug, rating, count }: { slug: string; rating: number; count: number }) {
+  const [reviews, setReviews]       = useState<Review[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [showForm, setShowForm]     = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formMsg, setFormMsg]       = useState<string | null>(null);
+  const [formError, setFormError]   = useState<string | null>(null);
+
+  // Form state
+  const [starRating, setStarRating] = useState(0);
+  const [hoverStar, setHoverStar]   = useState(0);
+  const [title, setTitle]           = useState("");
+  const [body, setBody]             = useState("");
+
+  // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("knl_token"));
+  }, []);
+
+  const fetchReviews = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await productsApi.reviews.list(slug, { page: 1 });
+      setReviews(r.data.data?.data ?? []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [slug]);
+
+  useEffect(() => { fetchReviews(); }, [fetchReviews]);
+
+  // Compute star distribution from real reviews
+  const distribution = [5, 4, 3, 2, 1].map((stars) => ({
+    stars,
+    count: reviews.filter((r) => r.rating === stars).length,
+    pct: reviews.length > 0
+      ? Math.round((reviews.filter((r) => r.rating === stars).length / reviews.length) * 100)
+      : 0,
+  }));
+
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (starRating === 0 || body.length < 10) return;
+    setSubmitting(true);
+    setFormError(null);
+    setFormMsg(null);
+    try {
+      await productsApi.reviews.create(slug, {
+        rating: starRating,
+        title: title || undefined,
+        body,
+      });
+      setFormMsg("Review submitted! It will appear after admin approval.");
+      setShowForm(false);
+      setStarRating(0);
+      setTitle("");
+      setBody("");
+    } catch (err: any) {
+      setFormError(err.response?.data?.message ?? "Failed to submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div>
@@ -416,44 +491,147 @@ function ReviewsTab({ rating, count }: { rating: number; count: number }) {
           <div className="text-[12px] text-gray-mid">{count} reviews</div>
         </div>
         <div className="flex-1 space-y-1.5">
-          {[5, 4, 3, 2, 1].map((stars) => (
-            <div key={stars} className="flex items-center gap-2">
-              <span className="text-[11px] text-gray-mid w-3">{stars}</span>
+          {distribution.map((d) => (
+            <div key={d.stars} className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-mid w-3">{d.stars}</span>
               <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gold rounded-full"
-                  style={{ width: stars === 5 ? "75%" : stars === 4 ? "18%" : "7%" }}
-                />
+                <div className="h-full bg-gold rounded-full" style={{ width: `${d.pct}%` }} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Review cards */}
-      <div className="space-y-4 max-w-2xl">
-        {sampleReviews.map((r) => (
-          <div key={r.name} className="bg-card border border-white/5 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-green-dark flex items-center justify-center font-utility text-[13px] font-bold text-green-light">
-                  {r.name[0]}
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-white">{r.name}</p>
-                  <p className="text-[11px] text-gray-mid">{r.location}</p>
-                </div>
-              </div>
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <span key={s} className={s <= r.rating ? "text-gold text-sm" : "text-gray-dark text-sm"}>★</span>
-                ))}
-              </div>
+      {/* Submit success message */}
+      {formMsg && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 mb-6 max-w-2xl">
+          <p className="text-[13px] text-green-light">{formMsg}</p>
+        </div>
+      )}
+
+      {/* Write a Review button */}
+      {isLoggedIn && !showForm && !formMsg && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="mb-6 text-[13px] font-utility font-semibold text-green-light border border-green-mid/40 hover:border-green-mid rounded-lg px-4 py-2 transition-all"
+        >
+          Write a Review
+        </button>
+      )}
+
+      {/* Write a Review form */}
+      {showForm && (
+        <form onSubmit={handleSubmitReview} className="bg-card border border-white/5 rounded-xl p-6 mb-8 max-w-2xl">
+          <p className="text-[14px] font-semibold text-white mb-4">Write Your Review</p>
+
+          {formError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2.5 mb-4">
+              <p className="text-[12px] text-red-400">{formError}</p>
             </div>
-            <p className="text-[13px] text-gray-light leading-relaxed italic">&ldquo;{r.text}&rdquo;</p>
+          )}
+
+          {/* Star rating selector */}
+          <div className="mb-4">
+            <label className="text-[12px] text-gray-mid block mb-2">Rating *</label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStarRating(s)}
+                  onMouseEnter={() => setHoverStar(s)}
+                  onMouseLeave={() => setHoverStar(0)}
+                  className="text-2xl transition-colors"
+                >
+                  <span className={s <= (hoverStar || starRating) ? "text-gold" : "text-gray-dark"}>★</span>
+                </button>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+
+          {/* Title */}
+          <div className="mb-4">
+            <label className="text-[12px] text-gray-mid block mb-2">Title (optional)</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Summarize your experience"
+              className="w-full bg-mid border border-white/10 text-[13px] text-white rounded-lg px-4 py-2.5 outline-none focus:border-green-mid"
+              maxLength={100}
+            />
+          </div>
+
+          {/* Body */}
+          <div className="mb-4">
+            <label className="text-[12px] text-gray-mid block mb-2">Review *</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Share your experience with this product (min 10 characters)"
+              rows={4}
+              className="w-full bg-mid border border-white/10 text-[13px] text-white rounded-lg px-4 py-2.5 outline-none focus:border-green-mid resize-none"
+              maxLength={2000}
+              required
+              minLength={10}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={submitting || starRating === 0 || body.length < 10}
+              className="text-[12px] font-utility font-semibold text-white bg-green-mid hover:bg-green-light/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-5 py-2.5 transition-all"
+            >
+              {submitting ? "Submitting…" : "Submit Review"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowForm(false); setFormError(null); }}
+              className="text-[12px] font-utility font-semibold text-gray-mid hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-5 py-2.5 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Review cards */}
+      {loading ? (
+        <div className="text-[13px] text-gray-mid py-8">Loading reviews…</div>
+      ) : reviews.length === 0 ? (
+        <div className="text-[13px] text-gray-mid py-8">No reviews yet. Be the first to review this product!</div>
+      ) : (
+        <div className="space-y-4 max-w-2xl">
+          {reviews.map((r) => (
+            <div key={r.id} className="bg-card border border-white/5 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-green-dark flex items-center justify-center font-utility text-[13px] font-bold text-green-light">
+                    {r.user.first_name[0]}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-white">
+                      {r.user.first_name} {r.user.last_name[0]}.
+                    </p>
+                    <p className="text-[11px] text-gray-mid">
+                      {new Date(r.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                      {r.is_verified && <span className="ml-2 text-green-light">✓ Verified Purchase</span>}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <span key={s} className={s <= r.rating ? "text-gold text-sm" : "text-gray-dark text-sm"}>★</span>
+                  ))}
+                </div>
+              </div>
+              {r.title && <p className="text-[13px] font-semibold text-white mb-1">{r.title}</p>}
+              <p className="text-[13px] text-gray-light leading-relaxed italic">&ldquo;{r.body}&rdquo;</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

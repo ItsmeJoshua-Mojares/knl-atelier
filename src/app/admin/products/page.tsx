@@ -18,11 +18,15 @@ interface ProductImage {
 
 interface Product {
   id: number; name: string; sku: string;
-  price: number; stock_quantity: number;
+  price: number; compare_at_price?: number; stock_quantity: number;
   is_active: boolean; is_featured: boolean; is_bestseller: boolean;
   category?: { id: number; name: string };
   brand?:    { id: number; name: string };
   category_id?: number; brand_id?: number;
+  ref_number?: string; caliber_number?: string;
+  short_desc?: string; description?: string;
+  condition_status?: string;
+  specifications?: Record<string, string> | string;
   images?: ProductImage[];
 }
 
@@ -85,21 +89,48 @@ export default function AdminProductsPage() {
 
   async function openEdit(p: Product) {
     setEditing(p);
-    reset({
-      name: p.name, sku: p.sku, price: p.price,
-      stock_quantity: p.stock_quantity, short_desc: (p as any).short_desc,
-      is_active: p.is_active, is_featured: p.is_featured, is_bestseller: p.is_bestseller,
-      category_id: p.category_id ?? p.category?.id ?? "",
-      brand_id: p.brand_id ?? p.brand?.id ?? "",
-    });
-    setSelectedFiles([]);
-    setPreviews([]);
 
-    // Fetch full product details including images
+    // Fetch full product details including images and specs
+    let fullProduct = p;
     try {
       const r = await adminApi.products.get(p.id);
-      setExistingImages(r.data.data?.images ?? []);
+      fullProduct = r.data.data ?? p;
+      setExistingImages(fullProduct.images ?? []);
     } catch { setExistingImages([]); }
+
+    // Parse specifications if stored as JSON string
+    let specs: Record<string, string> = {};
+    if (fullProduct.specifications) {
+      if (typeof fullProduct.specifications === "string") {
+        try { specs = JSON.parse(fullProduct.specifications); } catch { specs = {}; }
+      } else {
+        specs = fullProduct.specifications;
+      }
+    }
+
+    reset({
+      name: fullProduct.name,
+      sku: fullProduct.sku,
+      price: fullProduct.price,
+      compare_at_price: fullProduct.compare_at_price ?? "",
+      stock_quantity: fullProduct.stock_quantity,
+      short_desc: fullProduct.short_desc ?? "",
+      description: fullProduct.description ?? "",
+      ref_number: fullProduct.ref_number ?? "",
+      caliber_number: fullProduct.caliber_number ?? "",
+      condition_status: fullProduct.condition_status ?? "New",
+      nickname: specs.nickname ?? "",
+      diameter: specs.diameter ?? "",
+      bezel: specs.bezel ?? "",
+      movement: specs.movement ?? "",
+      crystal: specs.crystal ?? "",
+      inclusions: specs.inclusions ?? "",
+      is_active: fullProduct.is_active,
+      is_featured: fullProduct.is_featured,
+      is_bestseller: fullProduct.is_bestseller,
+      category_id: fullProduct.category_id ?? fullProduct.category?.id ?? "",
+      brand_id: fullProduct.brand_id ?? fullProduct.brand?.id ?? "",
+    });
 
     setShowModal(true);
     setApiMsg("");
@@ -127,6 +158,24 @@ export default function AdminProductsPage() {
     setSaving(true);
     setApiMsg("");
     try {
+      // Pack watch spec fields into specifications JSON
+      const specFields = ["nickname", "diameter", "bezel", "movement", "crystal", "inclusions"];
+      const specs: Record<string, string> = {};
+      for (const field of specFields) {
+        if (data[field]) {
+          specs[field] = String(data[field]);
+          delete data[field];
+        }
+      }
+      if (Object.keys(specs).length > 0) {
+        data.specifications = specs;
+      }
+
+      // Convert empty strings to null for nullable fields
+      for (const key of ["compare_at_price", "ref_number", "caliber_number", "description", "condition_status"]) {
+        if (data[key] === "" || data[key] === undefined) delete data[key];
+      }
+
       let productId: number;
       if (editing) {
         await adminApi.products.update(editing.id, data);
@@ -307,6 +356,66 @@ export default function AdminProductsPage() {
           <FormField label="Short Description">
             <textarea {...register("short_desc")} className={`${inputCls} resize-none`} rows={2} placeholder="Brand new, 100% authentic…"/>
           </FormField>
+          <FormField label="Long Description">
+            <textarea {...register("description")} className={`${inputCls} resize-none`} rows={4} placeholder="Full product description…"/>
+          </FormField>
+
+          {/* ── Watch Details ───────────────────────────── */}
+          <div className="border-t border-white/5 pt-4">
+            <p className="text-[12px] font-utility font-semibold text-white tracking-wide mb-3">
+              Watch Details
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Ref. Number">
+                <input {...register("ref_number")} className={inputCls} placeholder="SSK001"/>
+              </FormField>
+              <FormField label="Caliber Number">
+                <input {...register("caliber_number")} className={inputCls} placeholder="4R34"/>
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <FormField label="Nickname">
+                <input {...register("nickname")} className={inputCls} placeholder="Bruce Wayne"/>
+              </FormField>
+              <FormField label="Condition">
+                <select {...register("condition_status")} className={inputCls}>
+                  <option value="New">New</option>
+                  <option value="Pre-owned">Pre-owned</option>
+                  <option value="Unworn">Unworn</option>
+                  <option value="Refurbished">Refurbished</option>
+                </select>
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <FormField label="Diameter">
+                <input {...register("diameter")} className={inputCls} placeholder="42.5mm"/>
+              </FormField>
+              <FormField label="Bezel">
+                <input {...register("bezel")} className={inputCls} placeholder="Rotated"/>
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <FormField label="Movement">
+                <input {...register("movement")} className={inputCls} placeholder="Automatic"/>
+              </FormField>
+              <FormField label="Crystal">
+                <input {...register("crystal")} className={inputCls} placeholder="Hardlex"/>
+              </FormField>
+            </div>
+            <div className="mt-4">
+              <FormField label="Inclusions (What's Included)">
+                <input {...register("inclusions")} className={inputCls} placeholder="Box, manuals, & warranty card"/>
+              </FormField>
+            </div>
+          </div>
+
+          {/* ── Pricing ──────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Compare at Price (₱)">
+              <input type="number" step="0.01" {...register("compare_at_price")} className={inputCls} placeholder="0"/>
+            </FormField>
+          </div>
+
           <div className="flex gap-4">
             <label className="flex items-center gap-2 text-[12px] text-gray-light cursor-pointer">
               <input type="checkbox" {...register("is_active")} className="accent-green-mid"/>

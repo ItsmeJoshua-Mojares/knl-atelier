@@ -147,6 +147,14 @@ export const productsApi = {
   featured: () => apiClient.get("/products/featured"),
 
   bestsellers: () => apiClient.get("/products/bestsellers"),
+
+  // Reviews
+  reviews: {
+    list: (slug: string, params?: { page?: number }) =>
+      apiClient.get(`/products/${slug}/reviews`, { params }),
+    create: (slug: string, data: { rating: number; title?: string; body: string }) =>
+      apiClient.post(`/products/${slug}/reviews`, data),
+  },
 };
 
 // ── Cart API ──────────────────────────────────────────────────
