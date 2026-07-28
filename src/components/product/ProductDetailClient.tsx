@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -40,6 +40,14 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [activeTab, setActiveTab]     = useState<"specs" | "inclusions" | "reviews">("specs");
   const [toastMsg, setToastMsg]       = useState<string | null>(null);
 
+  // Image zoom & pan
+  const [zoom, setZoom]               = useState(1);
+  const [pan, setPan]                 = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging]   = useState(false);
+  const dragStart                     = useRef({ x: 0, y: 0 });
+  const panStart                      = useRef({ x: 0, y: 0 });
+  const imageContainerRef             = useRef<HTMLDivElement>(null);
+
   const { addItem }     = useCartStore();
   const { toggle, has } = useWishlistStore();
 
@@ -55,6 +63,98 @@ export default function ProductDetailClient({ product, related }: Props) {
   function handleBuyNow() {
     addItem(product, quantity);
     router.push("/checkout");
+  }
+
+  // Reset zoom/pan when switching images
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [selectedImg]);
+
+  // Attach non-passive wheel listener for zoom (React's onWheel is passive by default)
+  useEffect(() => {
+    const el = imageContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      setZoom((prev) => {
+        const next = Math.min(Math.max(prev + delta, 1), 4);
+        if (next === 1) setPan({ x: 0, y: 0 });
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  function handleDoubleClick() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    panStart.current = { ...pan };
+  }
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    setPan({
+      x: panStart.current.x + dx,
+      y: panStart.current.y + dy,
+    });
+  }
+
+  function handleMouseUp() {
+    setIsDragging(false);
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      // Pinch start — record initial distance
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      (e.currentTarget as HTMLElement).dataset.pinchDist = String(Math.hypot(dx, dy));
+      (e.currentTarget as HTMLElement).dataset.pinchZoom = String(zoom);
+      return;
+    }
+    if (zoom <= 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    dragStart.current = { x: touch.clientX, y: touch.clientY };
+    panStart.current = { ...pan };
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      // Pinch move — scale based on distance change
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const startDist = parseFloat((e.currentTarget as HTMLElement).dataset.pinchDist ?? "0");
+      const startZoom = parseFloat((e.currentTarget as HTMLElement).dataset.pinchZoom ?? "1");
+      if (startDist > 0) {
+        const scale = dist / startDist;
+        const next = Math.min(Math.max(startZoom * scale, 1), 4);
+        setZoom(next);
+        if (next === 1) setPan({ x: 0, y: 0 });
+      }
+      return;
+    }
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStart.current.x;
+    const dy = touch.clientY - dragStart.current.y;
+    setPan({
+      x: panStart.current.x + dx,
+      y: panStart.current.y + dy,
+    });
   }
 
   // Placeholder images if none provided
@@ -111,17 +211,36 @@ export default function ProductDetailClient({ product, related }: Props) {
 
           {/* LEFT: Image gallery */}
           <div>
-            {/* Main image */}
-            <div className={`relative aspect-square rounded-2xl overflow-hidden bg-[linear-gradient(135deg,#1a3a1f,#1c3020)] mb-4`}>
+            {/* Main image with zoom */}
+            <div
+              ref={imageContainerRef}
+              onDoubleClick={handleDoubleClick}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleMouseUp}
+              className={`relative aspect-square rounded-2xl overflow-hidden bg-[linear-gradient(135deg,#1a3a1f,#1c3020)] mb-4 ${zoom > 1 ? "cursor-grab" : "cursor-zoom-in"} ${isDragging ? "cursor-grabbing" : ""}`}
+            >
               {images[selectedImg] ? (
-                <Image
-                  src={images[selectedImg]}
-                  alt={`${product.brand} ${product.name}`}
-                  fill
-                  className="object-contain p-10"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
+                <div
+                  className="absolute inset-0 transition-transform duration-150 ease-out"
+                  style={{
+                    transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                  }}
+                >
+                  <Image
+                    src={images[selectedImg]}
+                    alt={`${product.brand} ${product.name}`}
+                    fill
+                    className="object-contain p-10"
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    draggable={false}
+                  />
+                </div>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="font-utility text-5xl font-bold text-green-mid/20">
@@ -145,6 +264,20 @@ export default function ProductDetailClient({ product, related }: Props) {
                 `}>
                   {product.badge}
                 </span>
+              )}
+
+              {/* Zoom hint / indicator */}
+              {zoom === 1 ? (
+                <span className="absolute bottom-3 right-3 font-utility text-[9px] tracking-[1px] uppercase text-white/30 pointer-events-none">
+                  Scroll to zoom · Double-click to reset
+                </span>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  className="absolute bottom-3 right-3 font-utility text-[10px] font-semibold tracking-[1px] uppercase text-white/60 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5 transition-all border border-white/10"
+                >
+                  {Math.round(zoom * 100)}% — Click to reset
+                </button>
               )}
             </div>
 

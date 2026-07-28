@@ -102,7 +102,7 @@ export default function AdminProductsPage() {
     let fullProduct = p;
     try {
       const r = await adminApi.products.get(p.id);
-      fullProduct = r.data.data ?? p;
+      fullProduct = r.data.data?.product ?? p;
       setExistingImages(fullProduct.images ?? []);
     } catch { setExistingImages([]); }
 
