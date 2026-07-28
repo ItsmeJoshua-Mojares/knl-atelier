@@ -180,7 +180,7 @@ export default function AdminProductsPage() {
       }
 
       // Convert empty strings to null for nullable fields
-      for (const key of ["compare_at_price", "ref_number", "caliber_number", "description", "condition_status"]) {
+      for (const key of ["brand_id", "compare_at_price", "ref_number", "caliber_number", "description", "condition_status"]) {
         if (data[key] === "" || data[key] === undefined) delete data[key];
       }
 
