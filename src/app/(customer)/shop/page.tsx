@@ -46,20 +46,26 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-  const [categories, products] = await Promise.all([
+  const [categories, products, brandsRes] = await Promise.all([
     fetch(`${apiBase}/categories`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((j) => (j.data ?? []).map(apiCategoryToFrontend)),
     fetch(`${apiBase}/products?per_page=48`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { data: { data: [] } }))
       .then((j) => (j.data?.data ?? []).map(apiProductToFrontend)),
+    fetch(`${apiBase}/brands`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((j) => (j.data ?? [])),
   ]);
+
+  const brands = brandsRes.map((b: { name: string }) => b.name);
 
   return (
     <div className="min-h-screen bg-dark pt-8">
       <ShopClient
         initialSearchParams={params}
         categories={categories}
+        brands={brands}
         initialProducts={products}
       />
     </div>

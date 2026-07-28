@@ -28,6 +28,7 @@ import type { Category, Product } from "@/types";
 interface ShopClientProps {
   initialSearchParams: Record<string, string | undefined>;
   categories: Category[];
+  brands: string[];
   initialProducts?: Product[];
 }
 
@@ -39,9 +40,7 @@ const SORT_OPTIONS = [
   { value: "rating",     label: "Highest Rated" },
 ];
 
-const BRANDS = ["Seiko", "Calvin Klein", "Reebok", "Adidas", "Guess", "Michael Kors"];
-
-export default function ShopClient({ initialSearchParams, categories, initialProducts }: ShopClientProps) {
+export default function ShopClient({ initialSearchParams, categories, brands, initialProducts }: ShopClientProps) {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -195,7 +194,7 @@ export default function ShopClient({ initialSearchParams, categories, initialPro
 
             {/* Brand filter */}
             <FilterSection title="Brand">
-              {BRANDS.map((brand) => (
+              {brands.map((brand) => (
                 <button
                   key={brand}
                   onClick={() =>
