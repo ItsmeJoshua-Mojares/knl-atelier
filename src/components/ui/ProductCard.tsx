@@ -58,11 +58,11 @@ export default function ProductCard({
           font-utility text-[10px] font-bold tracking-[1.5px] uppercase
           px-2.5 py-1 rounded
           ${product.badge === "new"        ? "bg-green-mid text-white" : ""}
-          ${product.badge === "sale"       ? "bg-gold text-dark" : ""}
+          ${product.badge === "discounted" ? "bg-gold text-dark" : ""}
           ${product.badge === "hot"        ? "bg-red-700 text-white" : ""}
           ${product.badge === "bestseller" ? "bg-gold text-dark" : ""}
         `}>
-          {product.badge === "bestseller" ? "Best Seller" : product.badge}
+          {product.badge === "bestseller" ? "Best Seller" : product.badge === "discounted" ? "Discounted" : product.badge}
         </span>
       )}
 

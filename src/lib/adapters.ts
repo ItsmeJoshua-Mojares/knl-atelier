@@ -135,7 +135,7 @@ function deriveBadge(api: ApiProduct): Product["badge"] {
         ? parseFloat(api.compare_at_price)
         : api.compare_at_price;
     if (cap > (typeof api.price === "string" ? parseFloat(api.price) : api.price)) {
-      return "sale";
+      return "discounted";
     }
   }
   if (api.created_at) {

@@ -28,7 +28,7 @@ export interface Product {
   price: number;              // in PHP, e.g. 22999
   compareAtPrice?: number;    // original price if on sale
   images: string[];           // array of image URLs
-  badge?: "new" | "sale" | "hot" | "bestseller";
+  badge?: "new" | "discounted" | "hot" | "bestseller";
   specs: WatchSpecs | GeneralSpecs;
   inStock: boolean;
   isFeatured: boolean;

@@ -155,7 +155,7 @@ export const FEATURED_PRODUCTS: Product[] = [
     category: "watches",
     price: 22499,
     images: ["/images/watches/ssk035.jpg"],
-    badge: "sale",
+    badge: "discounted",
     specs: {
       type: "watch",
       refNumber: "SSK035",
