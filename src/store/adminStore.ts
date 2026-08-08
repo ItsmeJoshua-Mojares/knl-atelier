@@ -23,6 +23,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { setAuthCookie, clearAuthCookie } from "@/lib/auth/cookies";
 
 export interface AdminUser {
   id: number;
@@ -59,11 +60,13 @@ export const useAdminStore = create<AdminStore>()(
 
       setAdmin: (admin, token) => {
         localStorage.setItem("knl_token", token);
+        setAuthCookie(token);
         set({ admin, token, isAdminLoggedIn: true });
       },
 
       logout: () => {
         localStorage.removeItem("knl_token");
+        clearAuthCookie();
         set({ admin: null, token: null, isAdminLoggedIn: false });
       },
 

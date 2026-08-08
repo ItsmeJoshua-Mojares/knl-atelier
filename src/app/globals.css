@@ -25,6 +25,8 @@
   --color-gold:         #c9a84c;
   --color-green-mid:    #2d6a35;
   --color-green-light:  #5cb85c;
+  --color-champagne:    #d8c49a;
+  --color-ivory:        #f2ead9;
   --transition-base:    0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -122,6 +124,29 @@
            px-5 py-2.5 rounded
            transition-all duration-300
            hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.45)];
+  }
+
+  /* Luxury hairline button — transparent, thin gold border.
+     Used on the dark hero where filled buttons feel loud. */
+  .btn-lux {
+    @apply inline-flex items-center gap-3
+           bg-transparent text-champagne
+           font-utility text-xs font-semibold tracking-[3px] uppercase
+           px-8 py-4 rounded-full
+           border border-champagne/60
+           transition-all duration-500
+           hover:border-champagne hover:text-ivory
+           hover:bg-champagne/[0.08]
+           hover:shadow-[0_0_40px_rgba(216,196,154,0.18)];
+  }
+
+  /* Quiet text link used beside primary CTAs on the hero */
+  .text-link-lux {
+    @apply inline-flex items-center gap-2
+           font-utility text-xs font-semibold tracking-[3px] uppercase
+           text-white/70
+           transition-colors duration-300
+           hover:text-champagne;
   }
 
   /* Loading skeleton — animated placeholder while data loads */

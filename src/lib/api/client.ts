@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import axios from "axios";
+import { clearAuthCookie } from "@/lib/auth/cookies";
 
 // Create a custom Axios instance for our API.
 // All requests made with this instance automatically go to the
@@ -63,6 +64,7 @@ apiClient.interceptors.response.use(
       // Token expired or invalid — clear storage and redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("knl_token");
+        clearAuthCookie();
         window.location.href = "/login";
       }
     }

@@ -30,7 +30,6 @@ interface ApiCategory {
   is_active: boolean;
   products_count?: number;
 }
-
 interface ApiBrand {
   id: number;
   name: string;
@@ -79,6 +78,7 @@ export function apiCategoryToFrontend(api: ApiCategory): Category {
     slug: api.slug,
     description: api.description ?? "",
     icon: CATEGORY_ICONS[api.slug] ?? "\uD83D\uDCE6",
+    image: api.image_url ?? undefined,
   };
 }
 

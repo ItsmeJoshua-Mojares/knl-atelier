@@ -63,6 +63,7 @@ export interface Category {
   slug: string;
   description: string;
   icon: string;               // Emoji or icon name for now
+  image?: string;             // Real product photo (from API, optional)
 }
 
 // Cart item

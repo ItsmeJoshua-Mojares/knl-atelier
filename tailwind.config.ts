@@ -48,6 +48,10 @@ const config: Config = {
           dark:    "#a07830",
         },
 
+        // Champagne / ivory — black+champagne hero palette
+        champagne: "#d8c49a",
+        ivory:     "#f2ead9",
+
         // Text shades
         "off-white": "#f5f2ed",
         "gray-light": "#c8c8c8",

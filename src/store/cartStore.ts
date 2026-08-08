@@ -23,6 +23,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { setAuthCookie, clearAuthCookie } from "@/lib/auth/cookies";
 import type { Product } from "@/types";
 
 // Shape of one item in the cart
@@ -191,13 +192,13 @@ export const useAuthStore = create<AuthStore>()(
 
       setAuth: (user, token) => {
         localStorage.setItem("knl_token", token);
-        document.cookie = `knl_token=${token}; path=/; max-age=86400; Secure; SameSite=Lax`;
+        setAuthCookie(token);
         set({ user, token, isLoggedIn: true });
       },
 
       logout: () => {
         localStorage.removeItem("knl_token");
-        document.cookie = "knl_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax";
+        clearAuthCookie();
         set({ user: null, token: null, isLoggedIn: false });
       },
     }),

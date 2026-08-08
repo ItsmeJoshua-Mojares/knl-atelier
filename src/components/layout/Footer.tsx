@@ -20,21 +20,17 @@ import Link from "next/link";
 
 // Column data stored as arrays — much cleaner than repeating JSX
 const QUICK_LINKS = [
-  { href: "/",           label: "Home" },
-  { href: "/shop",       label: "Shop" },
-  { href: "/categories", label: "Categories" },
-  { href: "/about",      label: "About Us" },
-  { href: "/contact",    label: "Contact" },
-  { href: "/blog",       label: "Blog" },
+  { href: "/",        label: "Home" },
+  { href: "/shop",    label: "Shop" },
+  { href: "/about",   label: "About Us" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const CUSTOMER_LINKS = [
-  { href: "/account",       label: "My Account" },
-  { href: "/orders",        label: "Order History" },
-  { href: "/wishlist",      label: "Wishlist" },
-  { href: "/faq",           label: "FAQ" },
-  { href: "/returns",       label: "Returns & Refunds" },
-  { href: "/track",         label: "Track Order" },
+  { href: "/dashboard", label: "My Account" },
+  { href: "/dashboard", label: "Order History" },
+  { href: "/wishlist",  label: "Wishlist" },
+  { href: "/faq",       label: "FAQ" },
 ];
 
 const PAYMENT_METHODS = ["GCash", "Maya", "COD", "Bank"];
@@ -111,7 +107,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               {CUSTOMER_LINKS.map((link) => (
-                <li key={link.href}>
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-[13px] text-gray-mid hover:text-white transition-colors duration-300"
@@ -170,7 +166,6 @@ export default function Footer() {
             {[
               { href: "/privacy", label: "Privacy Policy" },
               { href: "/terms",   label: "Terms & Conditions" },
-              { href: "/sitemap", label: "Sitemap" },
             ].map((link) => (
               <Link
                 key={link.href}

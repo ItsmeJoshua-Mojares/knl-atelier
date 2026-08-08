@@ -1,187 +1,373 @@
 // src/components/home/HeroSection.tsx
 // ─────────────────────────────────────────────────────────────
-// CONCEPTS YOU LEARN HERE:
+// DESIGN: "Museum Spotlight" — now a featured-product carousel.
 //
-// "use client" is needed because we use Framer Motion, which
-// requires the browser to run its animations.
+// A rotating set of featured pieces in near-black, dramatically
+// lit, huge negative space. Editorial type on the left, the
+// current product floats in a soft-edged spotlight mask on the
+// right. Swipe (touch), drag, or use the arrow buttons to move
+// between products. Gold hairlines, champagne/ivory type, slow
+// cinematic motion.
 //
-// Framer Motion (motion.div, motion.h1) — a React animation
-// library. You add animation props directly to elements:
-//   initial  — the starting state (invisible, offset down)
-//   animate  — the ending state (visible, in position)
-//   transition — HOW it animates (duration, delay, easing)
-//
-// This creates a "staggered reveal" — each element fades in
-// slightly after the previous one, which looks polished and
-// professional compared to everything appearing at once.
+// If no featured products come from the API, we fall back to a
+// refined CSS watch dial so the hero still looks intentional.
 // ─────────────────────────────────────────────────────────────
 
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
+import type { Product } from "@/types";
+import { formatPrice } from "@/lib/format";
 
-// Reusable animation variant — items fade up into view
-// We define this once and reuse it for each element
-const fadeUp = {
-  initial:    { opacity: 0, y: 30 },
-  animate:    { opacity: 1, y: 0 },
-  // transition goes on the element itself, not here
-};
+// Slow, luxurious easing curve (cubic-bezier "ease-out-expo")
+const LUX_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-export default function HeroSection() {
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 26 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 1, delay, ease: LUX_EASE },
+});
+
+const CATEGORY_RAIL = [
+  { n: "01", label: "Watches" },
+  { n: "02", label: "Fragrances" },
+  { n: "03", label: "Footwear" },
+  { n: "04", label: "Accessories" },
+];
+
+const SWIPE_THRESHOLD = 60;
+
+interface HeroSectionProps {
+  featured?: Product[];
+}
+
+export default function HeroSection({ featured = [] }: HeroSectionProps) {
+  const [index, setIndex] = useState(0);
+
+  const count = featured.length;
+  const current = featured.length > 0 ? featured[index % featured.length] : null;
+  const heroImage = current?.images?.[0] ?? null;
+  const canSwipe = count > 1;
+
+  const go = (dir: 1 | -1) => {
+    if (!canSwipe) return;
+    setIndex((i) => (i + dir + count) % count);
+  };
+
+  const onPanEnd = (_: unknown, info: PanInfo) => {
+    if (!canSwipe) return;
+    if (info.offset.x < -SWIPE_THRESHOLD) go(1);
+    else if (info.offset.x > SWIPE_THRESHOLD) go(-1);
+  };
+
   return (
-    <section className={`relative min-h-screen flex items-center overflow-hidden bg-[#0d1f10]`}>
-      {/* ── Background leaf decorations ───────────────────── */}
-      {/* These are pure CSS shapes that mimic the PDF's botanical theme */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Top-right glow */}
-        <div className={`absolute top-0 right-0 w-[55%] h-full bg-[radial-gradient(ellipse_at_top_right,rgba(74,124,82,0.15)_0%,transparent_65%)]`} />
-        {/* Bottom-left glow */}
-        <div className={`absolute bottom-0 left-0 w-[45%] h-[70%] bg-[radial-gradient(ellipse_at_bottom_left,rgba(30,60,34,0.2)_0%,transparent_70%)]`} />
-      </div>
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0a0b0a]">
+      {/* ── Ambient wash — soft champagne glow behind the spotlight ── */}
+      <div className="absolute top-1/2 right-[-10%] w-[55%] h-[80%] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(216,196,154,0.08)_0%,transparent_62%)] pointer-events-none" />
 
-      {/* ── Main content grid ──────────────────────────────── */}
-      {/* Two columns on desktop, one column on mobile */}
+      {/* ── Giant serif watermark ───────────────────────────── */}
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 2, delay: 0.8 }}
+        aria-hidden
+        className="absolute -bottom-[8%] left-1/2 -translate-x-1/2 font-display font-semibold text-[clamp(220px,38vw,520px)] leading-none text-champagne/[0.035] select-none pointer-events-none whitespace-nowrap"
+      >
+        KNL
+      </motion.span>
+
+      {/* ── Film grain — adds expensive texture ─────────────── */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}
+      />
+
       <div className="knl-container relative z-10 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-10 items-center min-h-[82vh]">
 
-          {/* Left column: Text content */}
-          <div>
-            {/* Breadcrumb */}
-            <motion.p
-              {...fadeUp}
-              animate={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 30 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-utility text-[11px] tracking-[3px] uppercase text-green-light opacity-80 mb-6"
-            >
-              &gt;&gt; KNL Atelier &amp; Co.
-            </motion.p>
-
-            {/* "Welcome to" label */}
-            <motion.span
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="font-utility text-[11px] tracking-[4px] uppercase text-gray-mid block mb-2"
-            >
-              Welcome to
-            </motion.span>
-
-            {/* KNL monogram — the big logo */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <span className={`block font-utility font-bold leading-[0.85] text-[clamp(72px,10vw,120px)] tracking-[-6px] text-white`}>
-                <span className="text-green-light">K</span>NL
-              </span>
-              <span className={`block font-utility text-[clamp(14px,2vw,20px)] tracking-[8px] uppercase text-gray-light mt-2`}>
-                Atelier &amp; Co.
-              </span>
-            </motion.div>
+          {/* ── Left: editorial type ───────────────────────── */}
+          <div className="relative">
+            {/* Eyebrow — hairline + tracked caps */}
+            <div className="flex items-center gap-4 mb-8">
+              <motion.span
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 1.1, delay: 0.2, ease: LUX_EASE }}
+                className="block h-px w-14 bg-champagne origin-left"
+              />
+              <motion.p
+                {...fadeUp(0.3)}
+                className="font-utility text-[11px] tracking-[4px] uppercase text-champagne/80"
+              >
+                Est. 2021 · Makati, PH
+              </motion.p>
+            </div>
 
             {/* Headline */}
             <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className={`font-display text-[clamp(22px,3vw,34px)] font-normal text-off-white italic leading-[1.4] mt-7 mb-3`}
+              {...fadeUp(0.45)}
+              className="font-display font-light leading-[1.05] text-[clamp(44px,6.2vw,92px)]"
             >
-              Authentic Luxury, Yours to Wear
+              <span className="block text-ivory">Authentic Luxury,</span>
+              <span className="block italic text-champagne">Yours to Wear</span>
             </motion.h1>
 
-            {/* Sub-text */}
+            {/* Sub copy */}
             <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-[14px] text-gray-mid max-w-[340px] leading-[1.7] mb-9"
+              {...fadeUp(0.6)}
+              className="text-[15px] font-light text-white/55 max-w-[400px] leading-[1.8] mt-7"
             >
-              Curated watches, fragrances, shoes &amp; accessories —
-              all genuine, all exceptional.
+              Curated watches, fragrances, shoes &amp; accessories — all
+              genuine, all exceptional. Every piece chosen, verified, and
+              yours to wear.
             </motion.p>
 
-            {/* CTA buttons */}
+            {/* CTAs */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="flex gap-4 flex-wrap"
+              {...fadeUp(0.75)}
+              className="flex items-center gap-8 mt-11 flex-wrap"
             >
-              <Link href="/shop" className="btn-primary">
-                Browse Now
-                {/* Arrow icon */}
-                <svg width="14" height="14" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" strokeWidth="2.5">
+              <Link href="/shop" className="btn-lux group">
+                Discover the Collection
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="transition-transform duration-500 group-hover:translate-x-1">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
-              <Link href="/categories" className="btn-ghost">
-                Shop by Category
+              <Link href="/shop" className="text-link-lux group">
+                Explore Categories
+                <span className="text-champagne/70 transition-transform duration-500 group-hover:translate-x-1">→</span>
               </Link>
             </motion.div>
+
+            {/* Featured piece micro-card — follows the current slide */}
+            {current && (
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: LUX_EASE }}
+                className="mt-12"
+              >
+                <Link
+                  href={`/product/${current.slug}`}
+                  className="group inline-flex items-center gap-4 border border-white/10 bg-white/[0.03] rounded-xl p-3 pr-5 hover:border-champagne/50 hover:bg-white/[0.05] transition-all duration-500"
+                >
+                  <span className="w-14 h-14 rounded-lg overflow-hidden bg-black/40 shrink-0">
+                    {current.images[0] ? (
+                      <Image
+                        src={current.images[0]}
+                        alt={current.name}
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        unoptimized
+                      />
+                    ) : null}
+                  </span>
+                  <span>
+                    <span className="block font-utility text-[9px] tracking-[3px] uppercase text-champagne/70 mb-1">
+                      Featured Piece
+                    </span>
+                    <span className="block font-display text-[15px] text-ivory leading-tight">
+                      {current.name}
+                    </span>
+                    <span className="block font-utility text-[11px] tracking-[1px] text-white/50 mt-1">
+                      {current.sku} · {formatPrice(current.price)}
+                    </span>
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-champagne/70 ml-2 transition-transform duration-500 group-hover:translate-x-1">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </motion.div>
+            )}
           </div>
 
-          {/* Right column: Floating product visual */}
-          {/* hidden on mobile (lg:flex shows on large screens only) */}
+          {/* ── Right: spotlight product carousel ──────────── */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="hidden lg:flex items-center justify-center"
+            transition={{ duration: 1.4, delay: 0.5, ease: LUX_EASE }}
+            className="relative flex flex-col items-center py-10"
           >
-            {/*
-              In Phase 1, we use a placeholder SVG watch illustration.
-              In Phase 2, replace this with:
-              <Image src="/images/hero-watch.png" alt="Featured watch" ... />
-            */}
-            <div className="relative w-full max-w-[460px] animate-float">
-              {/* Placeholder watch circle */}
-              <div className={`w-72 h-72 mx-auto rounded-full border-[3px] border-green-mid/40 bg-[#1a2a1c] flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.7)]`}>
-                <div className={`w-56 h-56 rounded-full bg-[#0e1a10] border border-green-dark flex items-center justify-center flex-col gap-1`}>
-                  <span className="font-utility text-[10px] tracking-[4px] text-green-light/60 uppercase">
-                    Seiko
-                  </span>
-                  <span className="font-display text-5xl font-bold text-white/10">
-                    KNL
-                  </span>
-                  <span className="font-utility text-[8px] tracking-[2px] text-white/20 uppercase">
-                    Automatic
-                  </span>
-                </div>
-              </div>
+            {/* Swipe/drag target */}
+            <motion.div
+              onPanEnd={onPanEnd}
+              style={{ touchAction: "pan-y" }}
+              className="relative w-[min(78vw,440px)] aspect-square rounded-full overflow-hidden border border-champagne/30 cursor-grab active:cursor-grabbing"
+            >
+              <div
+                className="absolute inset-0"
+                style={{
+                  boxShadow:
+                    "0 40px 120px rgba(0,0,0,0.85), inset 0 0 80px rgba(0,0,0,0.9)",
+                }}
+              />
 
-              {/* KNL watermark badge */}
-              <div className={`absolute bottom-4 right-4 bg-green-dark/80 border border-green-mid/40 rounded-lg px-3 py-2`}>
-                <span className="font-utility text-[10px] tracking-[2px] text-green-light uppercase">
-                  100% Authentic
+              {heroImage && current ? (
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={current.id}
+                    initial={{ opacity: 0, scale: 1.03 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.7, ease: LUX_EASE }}
+                    className="absolute inset-0"
+                  >
+                    {/* Ken-Burns slow zoom */}
+                    <motion.div
+                      initial={{ scale: 1.12 }}
+                      animate={{ scale: 1.2 }}
+                      transition={{ duration: 16, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
+                      className="absolute inset-0"
+                    >
+                      <Image
+                        src={heroImage}
+                        alt={current.name}
+                        fill
+                        priority={index === 0}
+                        sizes="440px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </motion.div>
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <FallbackDial />
+              )}
+
+              {/* Warm grade — harmonises studio-white shots with the dark page */}
+              <div className="absolute inset-0 bg-champagne/10 mix-blend-overlay pointer-events-none" />
+              {/* Feather edges into black */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  maskImage: "radial-gradient(circle, transparent 58%, black 100%)",
+                  WebkitMaskImage: "radial-gradient(circle, transparent 58%, black 100%)",
+                  background: "radial-gradient(circle, transparent 55%, rgba(10,11,10,0.9) 100%)",
+                }}
+              />
+            </motion.div>
+
+            {/* Controls — arrows + counter */}
+            {canSwipe && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2, duration: 0.8 }}
+                className="flex items-center gap-6 mt-8"
+              >
+                <button
+                  onClick={() => go(-1)}
+                  aria-label="Previous product"
+                  className="w-11 h-11 rounded-full border border-champagne/30 text-champagne flex items-center justify-center hover:bg-champagne/10 hover:border-champagne/60 transition-all duration-300"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <span className="font-utility text-[11px] tracking-[3px] uppercase text-white/50">
+                  <span className="text-champagne">{String(index + 1).padStart(2, "0")}</span>
+                  {" / "}
+                  {String(count).padStart(2, "0")}
                 </span>
-              </div>
-            </div>
+
+                <button
+                  onClick={() => go(1)}
+                  aria-label="Next product"
+                  className="w-11 h-11 rounded-full border border-champagne/30 text-champagne flex items-center justify-center hover:bg-champagne/10 hover:border-champagne/60 transition-all duration-300"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </motion.div>
+            )}
           </motion.div>
 
         </div>
       </div>
 
-      {/* ── Scroll hint ────────────────────────────────────── */}
+      {/* ── Bottom metadata rail (desktop) ─────────────────── */}
+      <div className="absolute bottom-0 inset-x-0 hidden lg:block z-10">
+        <div className="knl-container">
+          <div className="flex items-center justify-between border-t border-white/[0.08] pt-6 pb-7">
+            <div className="flex items-center gap-10">
+              {CATEGORY_RAIL.map((cat) => (
+                <span key={cat.n} className="flex items-baseline gap-2 font-utility text-[11px] tracking-[3px] uppercase text-white/40">
+                  <span className="text-champagne/70">{cat.n}</span>
+                  {cat.label}
+                </span>
+              ))}
+            </div>
+            <span className="font-utility text-[10px] tracking-[3px] uppercase text-white/30">
+              Seiko · Fragrance · Footwear
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Scroll cue (mobile + desktop) ─────────────────── */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.4 }}
-        transition={{ delay: 1.2, duration: 0.6 }}
-        className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2`}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.4, duration: 0.8 }}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 lg:bottom-[72px] flex flex-col items-center gap-2"
       >
-        <span className="font-utility text-[10px] tracking-[3px] uppercase text-white">
+        <span className="font-utility text-[9px] tracking-[3px] uppercase text-white/40">
           Scroll
         </span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-             stroke="white" strokeWidth="2"
-             className="animate-bounce">
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
+        <div className="h-8 w-px bg-white/20 relative overflow-hidden">
+          <motion.span
+            animate={{ y: [-16, 32] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-0 top-0 h-2 w-px bg-champagne"
+          />
+        </div>
       </motion.div>
     </section>
+  );
+}
+
+// ── Fallback: refined CSS watch dial ─────────────────────────
+// Used when the API has no featured products. Gold ticks, gold
+// hands, gently rotating seconds hand — quiet, still intentional.
+function FallbackDial() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div
+        className="w-[68%] h-[68%] rounded-full relative"
+        style={{
+          background:
+            "radial-gradient(circle at 40% 30%, #1c1e1a 0%, #0c0d0b 65%, #050605 100%)",
+          boxShadow:
+            "0 0 0 1px rgba(216,196,154,0.25), 0 0 0 10px rgba(216,196,154,0.04), inset 0 0 40px rgba(0,0,0,0.8)",
+          backgroundImage: `
+            repeating-conic-gradient(rgba(216,196,154,0.35) 0deg 1deg, transparent 1deg 6deg)
+          `,
+          WebkitMaskImage: "radial-gradient(circle, black 0%, black 60%, transparent 61%)",
+          maskImage: "radial-gradient(circle, black 0%, black 60%, transparent 61%)",
+        }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="font-display text-[clamp(28px,4vw,44px)] text-champagne/80 tracking-[0.12em]">
+          KNL
+        </span>
+      </div>
+      {/* Hour hand — pivots from the dial centre */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full w-px h-[20%] pointer-events-none">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 600, ease: "linear", repeat: Infinity }}
+          className="absolute inset-0 origin-bottom bg-champagne/80"
+        />
+      </div>
+    </div>
   );
 }

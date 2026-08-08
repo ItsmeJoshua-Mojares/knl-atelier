@@ -22,6 +22,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import apiClient from "@/lib/api/client";
 
 // The shape of data this form collects
 interface NewsletterFormData {
@@ -30,6 +31,7 @@ interface NewsletterFormData {
 
 export default function Newsletter() {
   const [submitted, setSubmitted] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   // Initialize React Hook Form
   const {
@@ -41,15 +43,19 @@ export default function Newsletter() {
 
   // Called only if validation passes
   async function onSubmit(data: NewsletterFormData) {
-    // In Phase 2: call your API here
-    // await axios.post("/api/newsletter", { email: data.email })
-
-    // For now, simulate a 1 second API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    console.log("Newsletter signup:", data.email);
-    setSubmitted(true);
-    reset(); // Clear the form
+    setApiError("");
+    try {
+      // POST the email to Laravel → saved in newsletter_subscribers
+      const res = await apiClient.post("/newsletter/subscribe", {
+        email: data.email,
+      });
+      setSubmitted(true);
+      reset(); // Clear the form
+    } catch (err: any) {
+      setApiError(
+        err.response?.data?.message ?? "Something went wrong. Please try again."
+      );
+    }
   }
 
   return (
@@ -108,6 +114,13 @@ export default function Newsletter() {
               {errors.email && (
                 <p className="text-red-400 text-[12px] mt-2 text-left pl-4">
                   {errors.email.message}
+                </p>
+              )}
+
+              {/* Show API error (e.g. network failure) below the input */}
+              {apiError && (
+                <p className="text-red-400 text-[12px] mt-2 text-left pl-4">
+                  {apiError}
                 </p>
               )}
             </form>
