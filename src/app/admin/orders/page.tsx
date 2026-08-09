@@ -218,7 +218,7 @@ export default function AdminOrdersPage() {
             <p className="text-[12px] text-red-400">{apiMsg}</p>
           </div>
         )}
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleStatusUpdate(); }} className="space-y-4">
           <div className="flex items-center gap-3 p-3 bg-white/[0.03] rounded-xl">
             <span className="text-[12px] text-gray-mid">Current status:</span>
             <AdminBadge status={statusModal?.status ?? ""} />
@@ -248,11 +248,6 @@ export default function AdminOrdersPage() {
 
           <FormActions onCancel={() => setStatusModal(null)} isSubmitting={updating}
                        submitLabel={`Set to ${newStatus}`} />
-        </div>
-
-        {/* hidden form wrapper trick so FormActions submit button works without a real form */}
-        <form onSubmit={(e) => { e.preventDefault(); handleStatusUpdate(); }} className="hidden">
-          <button type="submit"/>
         </form>
       </AdminModal>
     </div>

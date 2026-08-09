@@ -23,6 +23,7 @@ import Script from "next/script";
 import "./globals.css";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import FacebookPixel, { FacebookPixelPageView } from "@/components/analytics/FacebookPixel";
+import MotionProvider from "@/components/ui/MotionProvider";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://knlatelier.com";
 
@@ -157,9 +158,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-dark text-white antialiased" suppressHydrationWarning>
-        {/* Strip browser-extension-injected attributes (e.g. fdprocessedid from password managers) before React hydrates */}
+        {/* Strip browser-extension-injected attributes (e.g. fdprocessedid from password managers) before React hydrates.
+            The one-shot strip ran too early — the extension injects the attribute AFTER it executes but BEFORE hydration,
+            so React still saw the extra attributes. A MutationObserver catches the injection at any time and removes it
+            before React hydrates each node. */}
         <Script id="strip-ext-attrs" strategy="beforeInteractive">
-          {`document.querySelectorAll('[fdprocessedid]').forEach(function(el){el.removeAttribute('fdprocessedid')});`}
+          {`(function () {
+            function strip(root) {
+              if (!root) return;
+              if (root.querySelectorAll) {
+                var els = root.querySelectorAll('[fdprocessedid]');
+                for (var i = 0; i < els.length; i++) els[i].removeAttribute('fdprocessedid');
+              }
+              if (root.nodeType === 1 && root.getAttribute && root.getAttribute('fdprocessedid') !== null) root.removeAttribute('fdprocessedid');
+            }
+            strip(document);
+            if (window.MutationObserver) {
+              var mo = new MutationObserver(function (records) {
+                for (var r = 0; r < records.length; r++) strip(records[r].target);
+              });
+              mo.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['fdprocessedid'], childList: true });
+              var iv = setInterval(function () { strip(document); }, 100);
+              setTimeout(function () { clearInterval(iv); }, 15000);
+            }
+          })();`}
         </Script>
 
         {/* Analytics — only fires in production (components handle the env check) */}
@@ -167,7 +189,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <FacebookPixel  pixelId={process.env.NEXT_PUBLIC_FB_PIXEL_ID ?? ""} />
         <FacebookPixelPageView />
 
-        <main>{children}</main>
+        <MotionProvider>
+          <main>{children}</main>
+        </MotionProvider>
       </body>
     </html>
   );

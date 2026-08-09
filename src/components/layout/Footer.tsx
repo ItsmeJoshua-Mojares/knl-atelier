@@ -33,7 +33,7 @@ const CUSTOMER_LINKS = [
   { href: "/faq",       label: "FAQ" },
 ];
 
-const PAYMENT_METHODS = ["GCash", "Maya", "COD", "Bank"];
+const PAYMENT_METHODS = ["COD", "MEET UP", "Chat"];
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();

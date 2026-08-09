@@ -171,7 +171,7 @@ export default function AdminReviewsPage() {
             <p className="text-[12px] text-red-400">{apiMsg}</p>
           </div>
         )}
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleReply(); }} className="space-y-4">
           <div className="p-3 bg-white/[0.03] rounded-xl">
             <p className="text-[12px] text-gray-mid">Original review:</p>
             <p className="text-[13px] text-white mt-1">{replyModal?.body}</p>
@@ -183,9 +183,6 @@ export default function AdminReviewsPage() {
           </FormField>
           <FormActions onCancel={() => setReplyModal(null)} isSubmitting={saving}
                        submitLabel="Save Reply" />
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); handleReply(); }} className="hidden">
-          <button type="submit" />
         </form>
       </AdminModal>
     </div>

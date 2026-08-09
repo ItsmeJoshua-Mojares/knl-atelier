@@ -261,7 +261,7 @@ export default function CartPage() {
 
             {/* Payment methods */}
             <div className="flex items-center justify-center gap-2 mt-5 flex-wrap">
-              {["GCash", "Maya", "COD", "Bank"].map((m) => (
+              {["COD", "MEET UP", "Chat"].map((m) => (
                 <span key={m} className="text-[10px] text-gray-dark border border-white/5 rounded px-2 py-0.5">
                   {m}
                 </span>

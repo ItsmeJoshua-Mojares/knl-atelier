@@ -127,7 +127,7 @@ export default function AdminDashboardPage() {
               <p className="text-[13px] font-semibold text-white">
                 {data.pending_payments} payment{data.pending_payments !== 1 ? "s" : ""} awaiting verification
               </p>
-              <p className="text-[11px] text-gray-mid">GCash, Maya, and bank transfer payments need manual review</p>
+              <p className="text-[11px] text-gray-mid">COD, MEET UP, and Chat orders — confirm when payment is received</p>
             </div>
           </div>
           <span className="text-[12px] text-yellow-400 font-utility font-semibold">Review now →</span>

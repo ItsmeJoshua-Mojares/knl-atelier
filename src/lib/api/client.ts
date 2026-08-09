@@ -19,7 +19,19 @@
 // ─────────────────────────────────────────────────────────────
 
 import axios from "axios";
-import { clearAuthCookie } from "@/lib/auth/cookies";
+import { clearAuthCookie, clearAdminAuthCookie } from "@/lib/auth/cookies";
+
+// Admin API calls live under /admin — they must always use the
+// admin account's token (knl_admin_token), never the customer
+// token (knl_token). Everything else uses the customer token.
+function isAdminRequest(url?: string) {
+  return url?.startsWith("/admin");
+}
+
+function getAuthToken(url?: string): string | null {
+  const key = isAdminRequest(url) ? "knl_admin_token" : "knl_token";
+  return typeof window !== "undefined" ? localStorage.getItem(key) : null;
+}
 
 // Create a custom Axios instance for our API.
 // All requests made with this instance automatically go to the
@@ -35,13 +47,11 @@ const apiClient = axios.create({
 });
 
 // ── Request Interceptor ──────────────────────────────────────
-// Runs before every request. Attaches JWT token.
+// Runs before every request. Attaches JWT token (admin vs customer).
 apiClient.interceptors.request.use(
   (config) => {
     // Get token from localStorage (we'll use a more secure cookie in Phase 6)
-    const token = typeof window !== "undefined"
-      ? localStorage.getItem("knl_token")
-      : null;
+    const token = getAuthToken(config.url);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -61,11 +71,19 @@ apiClient.interceptors.response.use(
   // Error: check if it's a 401 (unauthorized)
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear storage and redirect to login
+      // Token expired or invalid — clear storage and redirect to login.
+      // Admin requests go to /admin/login, customer requests to /login.
       if (typeof window !== "undefined") {
-        localStorage.removeItem("knl_token");
-        clearAuthCookie();
-        window.location.href = "/login";
+        const admin = isAdminRequest(error.config?.url);
+        if (admin) {
+          localStorage.removeItem("knl_admin_token");
+          clearAdminAuthCookie();
+          window.location.href = "/admin/login";
+        } else {
+          localStorage.removeItem("knl_token");
+          clearAuthCookie();
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
@@ -81,7 +99,9 @@ export default apiClient;
 // triggers a browser download — used by all report buttons in the
 // admin dashboard.
 export async function downloadFile(url: string, filename: string) {
-  const token = localStorage.getItem("knl_token");
+  const admin = url.includes("/admin/");
+  const token = admin ? localStorage.getItem("knl_admin_token")
+                      : localStorage.getItem("knl_token");
   const response = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -376,7 +396,7 @@ export interface CreateOrderPayload {
   city:              string;
   province:          string;
   postal_code:       string;
-  payment_method:    "gcash" | "maya" | "bank_transfer" | "cod";
+  payment_method:    "cod" | "meet_up" | "chat";
   reference_number?: string;
   coupon_code?:      string;
   customer_notes?:   string;

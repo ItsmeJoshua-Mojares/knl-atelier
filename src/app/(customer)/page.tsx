@@ -25,12 +25,14 @@
 import type { Metadata } from "next";
 import type { SVGProps } from "react";
 
-import HeroSection    from "@/components/home/HeroSection";
+import HeroSection, { type HeroBanner } from "@/components/home/HeroSection";
 import CategoryGrid   from "@/components/home/CategoryGrid";
-import ProductGrid    from "@/components/home/ProductGrid";
+import ProductGrid, { type ProductGridSlide } from "@/components/home/ProductGrid";
 import Newsletter     from "@/components/home/Newsletter";
 
+import type { Category, Product } from "@/types";
 import { apiCategoryToFrontend, apiProductToFrontend } from "@/lib/adapters";
+import { safeFetchJson } from "@/lib/api/safeFetch";
 
 export const dynamic = "force-dynamic";
 
@@ -43,42 +45,81 @@ export const metadata: Metadata = {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
+const PRODUCTS_PER_SLIDE = 4;
+
+// Pull the products array out of the Laravel response envelope
+// ({ success, data: { data: [...] } } — the same shape no matter
+// how it's nested) and map each row to a frontend Product.
+function extractProducts(json: any): Product[] {
+  const arr = Array.isArray(json?.data?.data)
+    ? json.data.data
+    : Array.isArray(json?.data)
+      ? json.data
+      : [];
+  return arr.map(apiProductToFrontend);
+}
+
+// Break one category's products into slides of up to 4, each
+// tagged with the category title that the gallery heading shows.
+function categorySlides(products: Product[], title: string): ProductGridSlide[] {
+  const slides: ProductGridSlide[] = [];
+  for (let i = 0; i < products.length; i += PRODUCTS_PER_SLIDE) {
+    slides.push({ title, products: products.slice(i, i + PRODUCTS_PER_SLIDE) });
+  }
+  return slides;
+}
+
 export default async function HomePage() {
-  const [catRes, productsRes, featuredRes] = await Promise.all([
-    fetch(`${API}/categories`,                        { cache: "no-store" }),
-    fetch(`${API}/products?sort=newest&per_page=48&category=watches`, { cache: "no-store" }),
-    fetch(`${API}/products/featured`,                 { cache: "no-store" }),
+  // safeFetchJson never throws — if the API is down or times out,
+  // we get null and the sections below simply hide themselves.
+  const [catJson, featuredJson, bannersJson] = await Promise.all([
+    safeFetchJson(`${API}/categories`),
+    safeFetchJson(`${API}/products/featured`),
+    safeFetchJson(`${API}/banners`),
   ]);
 
-  const catJson      = catRes.ok      ? await catRes.json()      : null;
-  const productsJson = productsRes.ok ? await productsRes.json() : null;
-  const featuredJson = featuredRes.ok ? await featuredRes.json() : null;
-
   const catArr = Array.isArray(catJson?.data) ? catJson.data : [];
-  const productsArr = Array.isArray(productsJson?.data?.data)
-    ? productsJson.data.data
-    : Array.isArray(productsJson?.data)
-      ? productsJson.data
-      : [];
   const featuredArr = Array.isArray(featuredJson?.data?.products)
     ? featuredJson.data.products
     : [];
+  const bannerArr = Array.isArray(bannersJson?.data) ? bannersJson.data : [];
 
-  const categories   = catArr.map(apiCategoryToFrontend);
-  const latestProducts = productsArr.map(apiProductToFrontend);
-  const featured = featuredArr.map(apiProductToFrontend);
+  const categories: Category[] = catArr.map(apiCategoryToFrontend);
+  const featured   = featuredArr.map(apiProductToFrontend);
+
+  // Hero banners are admin-managed (position "hero"). When at least
+  // one exists the hero carousel shows them; otherwise it falls back
+  // to the featured products above.
+  const heroBanners: HeroBanner[] = bannerArr
+    .filter((b: any) => b.position === "hero" && b.image_url)
+    .map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      subtitle: b.subtitle ?? null,
+      image_url: b.image_url,
+      link_url: b.link_url ?? null,
+    }));
+
+  // Build the New Arrivals gallery from the newest few products in
+  // EVERY category (in sort_order), so a sell-ready store with 5
+  // populated categories shows all of them on the homepage. Empty
+  // categories are skipped, so the gallery only shows categories
+  // that have products today.
+  const categoryPayloads = await Promise.all(
+    categories.map((c) =>
+      safeFetchJson(`${API}/products?sort=newest&per_page=4&category=${c.slug}`),
+    ),
+  );
+  const slides: ProductGridSlide[] = categories.flatMap((c, i) =>
+    categorySlides(extractProducts(categoryPayloads[i]), c.name),
+  );
 
   return (
     <>
-      <HeroSection featured={featured} />
+      <HeroSection featured={featured} banners={heroBanners} />
       <TrustBar />
       <CategoryGrid categories={categories} />
-      <ProductGrid
-        products={latestProducts}
-        title='"Watches"'
-        label="New Arrivals"
-        viewAllHref="/shop"
-      />
+      <ProductGrid slides={slides} label="New Arrivals" viewAllHref="/shop" />
       <Newsletter />
     </>
   );

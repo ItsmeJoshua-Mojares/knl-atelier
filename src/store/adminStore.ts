@@ -15,15 +15,18 @@
 // on customer auth can't break admin auth and vice versa — the
 // blast radius of a bug is contained to one store.
 //
-// They share the SAME underlying JWT token (stored once in
-// localStorage as 'knl_token') because Laravel's auth:api guard
-// doesn't care whether the request came from the customer site
-// or the admin dashboard — only the role:admin middleware does.
+// They also use SEPARATE tokens. The admin panel stores its JWT
+// as 'knl_admin_token' and the customer storefront as
+// 'knl_token'. Sharing one key meant logging into one side
+// silently invalidated the other — every admin request would
+// then be rejected by the role:admin middleware (403). Admin
+// requests always send the admin token; customer requests send
+// the customer token.
 // ─────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { setAuthCookie, clearAuthCookie } from "@/lib/auth/cookies";
+import { setAdminAuthCookie, clearAdminAuthCookie } from "@/lib/auth/cookies";
 
 export interface AdminUser {
   id: number;
@@ -59,14 +62,14 @@ export const useAdminStore = create<AdminStore>()(
       isAdminLoggedIn: false,
 
       setAdmin: (admin, token) => {
-        localStorage.setItem("knl_token", token);
-        setAuthCookie(token);
+        localStorage.setItem("knl_admin_token", token);
+        setAdminAuthCookie(token);
         set({ admin, token, isAdminLoggedIn: true });
       },
 
       logout: () => {
-        localStorage.removeItem("knl_token");
-        clearAuthCookie();
+        localStorage.removeItem("knl_admin_token");
+        clearAdminAuthCookie();
         set({ admin: null, token: null, isAdminLoggedIn: false });
       },
 

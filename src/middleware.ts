@@ -48,6 +48,16 @@ export function middleware(request: NextRequest) {
   //  For now we rely on the client-side localStorage check in
   //  each page as a fallback.)
   const token = request.cookies.get("knl_token")?.value;
+  const adminToken = request.cookies.get("knl_admin_token")?.value;
+
+  // ── Protect the admin section ─────────────────────────────
+  // Admin pages must only be reachable with the ADMIN account's
+  // JWT (knl_admin_token). A valid customer session must never
+  // unlock /admin/*.
+  const isAdminRoute = pathname.startsWith("/admin");
+  if (isAdminRoute && pathname !== "/admin/login" && !adminToken) {
+    return NextResponse.redirect(new URL("/admin/login", request.url));
+  }
 
   // ── Protect routes that need auth ──────────────────────────
   const isProtected = PROTECTED_ROUTES.some((route) =>

@@ -78,7 +78,7 @@ export function apiCategoryToFrontend(api: ApiCategory): Category {
     slug: api.slug,
     description: api.description ?? "",
     icon: CATEGORY_ICONS[api.slug] ?? "\uD83D\uDCE6",
-    image: api.image_url ?? undefined,
+    image: api.image_url ? optimizeImageUrl(api.image_url) : undefined,
   };
 }
 
@@ -117,13 +117,24 @@ export function apiProductToFrontend(api: ApiProduct): Product {
 
 // ── Helpers ───────────────────────────────────────────────────
 
+// Injects Cloudinary's on-the-fly format/quality transforms
+// (f_auto = serve AVIF/WebP when the browser supports it,
+// q_auto = per-device optimal quality) so the CDN never ships
+// a full-size JPEG to phones. Only applies to public upload URLs;
+// signed URLs (which carry query params) are left untouched.
+function optimizeImageUrl(url: string): string {
+  if (!url.includes("res.cloudinary.com")) return url;
+  if (url.includes("?")) return url;
+  return url.replace("/image/upload/", "/image/upload/f_auto,q_auto/");
+}
+
 function buildImageList(api: ApiProduct): string[] {
   if (api.images && api.images.length > 0) {
     return api.images
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((img) => img.image_url);
+      .map((img) => optimizeImageUrl(img.image_url));
   }
-  if (api.primary_image) return [api.primary_image.image_url];
+  if (api.primary_image) return [optimizeImageUrl(api.primary_image.image_url)];
   return [];
 }
 

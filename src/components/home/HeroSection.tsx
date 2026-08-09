@@ -32,25 +32,63 @@ const fadeUp = (delay: number) => ({
 });
 
 const CATEGORY_RAIL = [
-  { n: "01", label: "Watches" },
-  { n: "02", label: "Fragrances" },
-  { n: "03", label: "Footwear" },
-  { n: "04", label: "Accessories" },
+  { n: "01", label: "Watches",     slug: "watches" },
+  { n: "02", label: "Fragrance",   slug: "fragrance" },
+  { n: "03", label: "Sole",        slug: "sole" },
+  { n: "04", label: "Accessories", slug: "accessories" },
 ];
 
 const SWIPE_THRESHOLD = 60;
 
-interface HeroSectionProps {
-  featured?: Product[];
+export interface HeroBanner {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image_url: string | null;
+  link_url: string | null;
 }
 
-export default function HeroSection({ featured = [] }: HeroSectionProps) {
+interface HeroSectionProps {
+  featured?: Product[];
+  banners?: HeroBanner[];
+}
+
+export default function HeroSection({ featured = [], banners = [] }: HeroSectionProps) {
   const [index, setIndex] = useState(0);
 
-  const count = featured.length;
-  const current = featured.length > 0 ? featured[index % featured.length] : null;
-  const heroImage = current?.images?.[0] ?? null;
+  // Admin-managed hero banners win when present; otherwise we fall
+  // back to featured products from the catalog.
+  const heroBanners = banners.filter((b) => b.image_url);
+  const useBanners = heroBanners.length > 0;
+
+  const count = useBanners ? heroBanners.length : featured.length;
+  const currentBanner = useBanners ? heroBanners[index % heroBanners.length] : null;
+  const current = !useBanners && featured.length > 0 ? featured[index % featured.length] : null;
+
+  const heroImage = currentBanner?.image_url ?? current?.images?.[0] ?? null;
   const canSwipe = count > 1;
+
+  // Unified "micro card" — a banner (title/subtitle/link) or a product
+  // (name/sku/price/link to its page), whichever is on screen.
+  const micro = currentBanner
+    ? {
+        key: `banner-${currentBanner.id}`,
+        href: currentBanner.link_url ?? "/shop",
+        eyebrow: "Featured Promo",
+        title: currentBanner.title,
+        sub: currentBanner.subtitle ?? "Shop the collection",
+        thumb: currentBanner.image_url ?? "",
+      }
+    : current
+      ? {
+          key: `product-${current.id}`,
+          href: `/product/${current.slug}`,
+          eyebrow: "Featured Piece",
+          title: current.name,
+          sub: `${current.sku} · ${formatPrice(current.price)}`,
+          thumb: current.images[0] ?? "",
+        }
+      : null;
 
   const go = (dir: 1 | -1) => {
     if (!canSwipe) return;
@@ -64,7 +102,7 @@ export default function HeroSection({ featured = [] }: HeroSectionProps) {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0a0b0a]">
+    <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-[#0a0b0a]">
       {/* ── Ambient wash — soft champagne glow behind the spotlight ── */}
       <div className="absolute top-1/2 right-[-10%] w-[55%] h-[80%] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(216,196,154,0.08)_0%,transparent_62%)] pointer-events-none" />
 
@@ -143,40 +181,39 @@ export default function HeroSection({ featured = [] }: HeroSectionProps) {
               </Link>
             </motion.div>
 
-            {/* Featured piece micro-card — follows the current slide */}
-            {current && (
+            {/* Featured micro-card — follows the current slide */}
+            {micro && (
               <motion.div
-                key={current.id}
+                key={micro.key}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: LUX_EASE }}
                 className="mt-12"
               >
                 <Link
-                  href={`/product/${current.slug}`}
+                  href={micro.href}
                   className="group inline-flex items-center gap-4 border border-white/10 bg-white/[0.03] rounded-xl p-3 pr-5 hover:border-champagne/50 hover:bg-white/[0.05] transition-all duration-500"
                 >
                   <span className="w-14 h-14 rounded-lg overflow-hidden bg-black/40 shrink-0">
-                    {current.images[0] ? (
+                    {micro.thumb ? (
                       <Image
-                        src={current.images[0]}
-                        alt={current.name}
+                        src={micro.thumb}
+                        alt={micro.title}
                         width={56}
                         height={56}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                        unoptimized
                       />
                     ) : null}
                   </span>
                   <span>
                     <span className="block font-utility text-[9px] tracking-[3px] uppercase text-champagne/70 mb-1">
-                      Featured Piece
+                      {micro.eyebrow}
                     </span>
                     <span className="block font-display text-[15px] text-ivory leading-tight">
-                      {current.name}
+                      {micro.title}
                     </span>
                     <span className="block font-utility text-[11px] tracking-[1px] text-white/50 mt-1">
-                      {current.sku} · {formatPrice(current.price)}
+                      {micro.sub}
                     </span>
                   </span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-champagne/70 ml-2 transition-transform duration-500 group-hover:translate-x-1">
@@ -208,31 +245,30 @@ export default function HeroSection({ featured = [] }: HeroSectionProps) {
                 }}
               />
 
-              {heroImage && current ? (
+              {heroImage && micro ? (
                 <AnimatePresence initial={false}>
                   <motion.div
-                    key={current.id}
+                    key={micro.key}
                     initial={{ opacity: 0, scale: 1.03 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.7, ease: LUX_EASE }}
                     className="absolute inset-0"
                   >
-                    {/* Ken-Burns slow zoom */}
+                    {/* Entrance zoom — settles static, no scroll drift */}
                     <motion.div
-                      initial={{ scale: 1.12 }}
-                      animate={{ scale: 1.2 }}
-                      transition={{ duration: 16, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
+                      initial={{ scale: 1.08 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 2.2, ease: LUX_EASE }}
                       className="absolute inset-0"
                     >
                       <Image
                         src={heroImage}
-                        alt={current.name}
+                        alt={micro.title}
                         fill
                         priority={index === 0}
                         sizes="440px"
                         className="object-cover"
-                        unoptimized
                       />
                     </motion.div>
                   </motion.div>
@@ -300,10 +336,14 @@ export default function HeroSection({ featured = [] }: HeroSectionProps) {
           <div className="flex items-center justify-between border-t border-white/[0.08] pt-6 pb-7">
             <div className="flex items-center gap-10">
               {CATEGORY_RAIL.map((cat) => (
-                <span key={cat.n} className="flex items-baseline gap-2 font-utility text-[11px] tracking-[3px] uppercase text-white/40">
+                <Link
+                  key={cat.n}
+                  href={`/shop?category=${cat.slug}`}
+                  className="flex items-baseline gap-2 font-utility text-[11px] tracking-[3px] uppercase text-white/40 hover:text-champagne transition-colors duration-300"
+                >
                   <span className="text-champagne/70">{cat.n}</span>
                   {cat.label}
-                </span>
+                </Link>
               ))}
             </div>
             <span className="font-utility text-[10px] tracking-[3px] uppercase text-white/30">

@@ -22,7 +22,7 @@ import { useForm }   from "react-hook-form";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/cartStore";
 import { formatPrice }  from "@/data/products";
-import { ordersApi, productsApi, type CreateOrderPayload } from "@/lib/api/client";
+import { ordersApi, productsApi, cartApi, type CreateOrderPayload } from "@/lib/api/client";
 import { apiProductToFrontend } from "@/lib/adapters";
 
 type Step = 1 | 2 | 3 | 4;
@@ -40,17 +40,22 @@ interface CheckoutForm {
   province:      string;
   postal_code:   string;
   // Step 3: Payment
-  payment_method: "gcash" | "maya" | "bank_transfer" | "cod";
-  // GCash/Maya reference number
-  reference_number?: string;
+  payment_method: "cod" | "meet_up" | "chat";
 }
 
 const PAYMENT_OPTIONS = [
-  { value: "gcash",         label: "GCash",         icon: "💚", desc: "Pay via GCash mobile wallet" },
-  { value: "maya",          label: "Maya",           icon: "💙", desc: "Pay via Maya (formerly PayMaya)" },
-  { value: "bank_transfer", label: "Bank Transfer",  icon: "🏦", desc: "Direct bank transfer" },
-  { value: "cod",           label: "Cash on Delivery", icon: "💵", desc: "Pay when your order arrives" },
+  { value: "cod",     label: "Cash on Delivery", icon: "💵", desc: "Pay cash when your order arrives" },
+  { value: "meet_up", label: "MEET UP",          icon: "📍", desc: "Available in Laguna, Batangas & Manila only" },
+  { value: "chat",    label: "Chat with me",     icon: "💬", desc: "Arrange payment & delivery via chat" },
 ] as const;
+
+type PayMethodValue = (typeof PAYMENT_OPTIONS)[number]["value"];
+
+// Contact channels shown when "Chat with me" is selected. Add more
+// here (Messenger, Instagram, Viber…) and they appear automatically.
+const CHAT_OPTIONS = [
+  { id: "facebook", label: "Facebook", desc: "Message me on Facebook", href: "https://www.facebook.com/joshua.mojares.3" },
+];
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -61,7 +66,19 @@ export default function CheckoutPage() {
   const [buyLoading, setBuyLoading] = useState(!!buySlug);
 
   const { items, addItem, getSubtotal, couponDiscount, couponCode, clearCart } = useCartStore();
-  const { user } = useAuthStore();
+  const { user, isLoggedIn } = useAuthStore();
+
+  // Auth guard — orders are placed by a logged-in user, so send guests
+  // to /login and bring them straight back afterwards (preserving any
+  // ?buy=slug intent).
+  useEffect(() => {
+    if (!isLoggedIn) {
+      const target = buySlug
+        ? `/login?redirect=${encodeURIComponent(`/checkout?buy=${buySlug}`)}`
+        : `/login?redirect=${encodeURIComponent("/checkout")}`;
+      router.replace(target);
+    }
+  }, [isLoggedIn, buySlug, router]);
 
   const { register, handleSubmit, watch, trigger,
           formState: { errors } } = useForm<CheckoutForm>({
@@ -126,6 +143,14 @@ export default function CheckoutPage() {
     setOrderError("");
 
     try {
+      // Sync the browser (Zustand) cart to the server cart first.
+      // OrderService reads prices/stock from the server cart, so the
+      // client cart must be mirrored to it before the order is placed.
+      await cartApi.clear();
+      for (const { product, quantity } of items) {
+        await cartApi.add(product.id, quantity);
+      }
+
       const payload: CreateOrderPayload = {
         first_name:        data.first_name,
         last_name:         data.last_name,
@@ -136,7 +161,6 @@ export default function CheckoutPage() {
         province:          data.province,
         postal_code:       data.postal_code,
         payment_method:    data.payment_method,
-        reference_number:  data.reference_number,
         coupon_code:       couponCode ?? undefined,
       };
 
@@ -155,6 +179,9 @@ export default function CheckoutPage() {
       setIsPlacing(false);
     }
   }
+
+  // Never render checkout UI for guests — the guard above is redirecting.
+  if (!isLoggedIn) return null;
 
   if (buyLoading) {
     return (
@@ -293,19 +320,41 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {/* Reference number for GCash / Maya */}
-                {(payMethod === "gcash" || payMethod === "maya") && (
+                {/* MEET UP note */}
+                {payMethod === "meet_up" && (
+                  <div className="mt-4 p-4 bg-white/[0.03] border border-white/10 rounded-xl">
+                    <p className="text-[13px] text-gray-light leading-relaxed">
+                      Meet-up is available in{" "}
+                      <span className="text-white font-semibold">Laguna, Batangas, and Metro Manila</span>{" "}
+                      only. We&apos;ll confirm the meeting point and schedule with you after you place
+                      your order.
+                    </p>
+                  </div>
+                )}
+
+                {/* Chat options — shows contact channels when "Chat with me" is selected */}
+                {payMethod === "chat" && (
                   <div className="mt-4 p-4 bg-white/[0.03] border border-white/10 rounded-xl">
                     <p className="text-[13px] text-gray-light mb-3">
-                      Send payment to: <span className="text-white font-semibold">0917-XXX-XXXX</span>
+                      Choose a channel to arrange payment &amp; delivery:
                     </p>
-                    <FormField label="Reference Number" error={errors.reference_number?.message}>
-                      <input
-                        {...register("reference_number", { required: "Please enter your reference number" })}
-                        className="form-input"
-                        placeholder="e.g. 1234567890"
-                      />
-                    </FormField>
+                    <div className="flex flex-wrap gap-3">
+                      {CHAT_OPTIONS.map((opt) => (
+                        <a
+                          key={opt.id}
+                          href={opt.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2.5 border border-white/10 bg-white/[0.03] rounded-xl px-4 py-3 hover:border-green-mid/60 hover:bg-green-dark/20 transition-all duration-200"
+                        >
+                          <span className="w-8 h-8 rounded-full bg-[#1877F2]/20 flex items-center justify-center text-sm">🔵</span>
+                          <span>
+                            <span className="block font-utility text-[13px] font-semibold text-white">{opt.label}</span>
+                            <span className="block text-[11px] text-gray-mid">{opt.desc}</span>
+                          </span>
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </FormSection>
@@ -333,7 +382,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 text-[13px]">
-                  <p className="text-gray-mid mb-1">Payment: <span className="text-white capitalize">{payMethod?.replace("_", " ")}</span></p>
+                  <p className="text-gray-mid mb-1">Payment: <span className="text-white capitalize">{payMethodLabel(payMethod)}</span></p>
                   <p className="text-gray-mid">Total: <span className="text-white font-bold text-lg">{formatPrice(total)}</span></p>
                 </div>
 
@@ -446,6 +495,12 @@ function FormSection({ title, children }: { title: string; children: React.React
       {children}
     </div>
   );
+}
+
+// Friendly display name for the selected payment method (review step).
+function payMethodLabel(value?: PayMethodValue): string {
+  if (!value) return "";
+  return PAYMENT_OPTIONS.find((o) => o.value === value)?.label ?? value.replace("_", " ");
 }
 
 function FormField({

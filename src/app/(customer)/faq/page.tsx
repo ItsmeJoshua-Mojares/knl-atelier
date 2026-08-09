@@ -65,7 +65,7 @@ const FAQ_GROUPS = [
     items: [
       {
         q: "What payment methods do you accept?",
-        a: "We accept GCash, Maya (formerly PayMaya), Bank Transfer (BPI, BDO, Metrobank), and Cash on Delivery (COD). For GCash and Maya, please send payment to the number shown at checkout and enter your reference number.",
+        a: "We offer Cash on Delivery (COD), MEET UP (available in Laguna, Batangas, and Metro Manila only), and Chat with me — message us on Facebook to arrange payment and delivery.",
       },
       {
         q: "Is Cash on Delivery available everywhere?",
@@ -73,7 +73,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "Is it safe to pay online?",
-        a: "Yes. Our website uses HTTPS encryption and we do not store your payment details on our servers. GCash and Maya transactions are processed through their secure platforms — we only receive a reference number for verification.",
+        a: "Yes. Our website uses HTTPS encryption, and we do not store credit card numbers or bank details on our servers. Online checkout simply records your order details — payment happens on delivery, at meet-up, or is arranged with us directly via chat.",
       },
     ],
   },
@@ -90,7 +90,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "How long do refunds take?",
-        a: "Once we receive and inspect the returned item, refunds are processed within 3–5 business days. GCash and Maya refunds are typically instant once processed. Bank transfers take 3–5 banking days.",
+        a: "Once we receive and inspect the returned item, refunds are processed within 3–5 business days and returned to you via your original payment method.",
       },
     ],
   },

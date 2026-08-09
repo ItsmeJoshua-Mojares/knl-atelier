@@ -21,10 +21,24 @@ import { apiCategoryToFrontend, apiProductToFrontend } from "@/lib/adapters";
 
 export const dynamic = "force-dynamic";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://knlatelier.com";
+
 export const metadata: Metadata = {
   title: "Shop",
   description:
     "Browse authentic Seiko watches, fragrances, shoes and accessories. Filter by category, brand and price.",
+  alternates: { canonical: `${SITE_URL}/shop` },
+  openGraph: {
+    title: "Shop — KNL Atelier & Co.",
+    description:
+      "Browse authentic Seiko watches, fragrances, shoes and accessories. Filter by category, brand and price.",
+    type: "website",
+    images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [`${SITE_URL}/og-default.jpg`],
+  },
 };
 
 // searchParams comes from the URL: /shop?category=watches&sort=newest
@@ -61,13 +75,28 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const brands = brandsRes.map((b: { name: string }) => b.name);
 
   return (
-    <div className="min-h-screen bg-dark pt-8">
-      <ShopClient
-        initialSearchParams={params}
-        categories={categories}
-        brands={brands}
-        initialProducts={products}
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+              { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+            ],
+          }),
+        }}
       />
-    </div>
+      <div className="min-h-screen bg-dark pt-8">
+        <ShopClient
+          initialSearchParams={params}
+          categories={categories}
+          brands={brands}
+          initialProducts={products}
+        />
+      </div>
+    </>
   );
 }

@@ -18,11 +18,11 @@ const SECTIONS = [
   },
   {
     title: "3. Payment Security",
-    body: `We do not store credit card numbers or full payment credentials on our servers. Payments made via GCash and Maya are processed on their respective secure platforms. We only record the reference number you provide for order verification. Bank transfer details are used solely to confirm received payments.`,
+    body: `We do not store credit card numbers or full payment credentials on our servers. Orders are settled by cash on delivery, meet-up (available in Laguna, Batangas, and Metro Manila), or arranged directly with us via chat. We only record the information you provide for order verification.`,
   },
   {
     title: "4. Cookies",
-    body: `We use essential cookies to keep your cart and session active. We also use analytical cookies (Google Analytics) to understand how visitors use our site. You can disable cookies in your browser settings, though some features may not function correctly without them.`,
+    body: `We use essential cookies and browser storage (localStorage) to keep your cart, wishlist, and login session active. We also use analytical cookies from Google Analytics and advertising cookies from Meta (Facebook Pixel) to understand how visitors use our site and measure our ads — these analytics fire only on our live site. You can disable cookies in your browser settings, though some features may not function correctly without them.`,
   },
   {
     title: "5. Data Sharing",

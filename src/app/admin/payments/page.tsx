@@ -1,19 +1,17 @@
 // src/app/admin/payments/page.tsx
 // ─────────────────────────────────────────────────────────────
-// CONCEPT: The verification queue pattern
+// CONCEPT: The payment confirmation queue
 //
-// This page IS the core of how KNL handles Philippine e-wallets.
-// Since GCash/Maya don't always offer instant API callbacks for
-// small merchants, the flow is:
-//   1. Customer pays and enters their reference number at checkout
-//   2. The reference number is stored in payments.transaction_id
-//   3. Admin opens this page, sees all "pending" e-wallet payments
-//   4. Admin checks their GCash/Maya app for each reference number
-//   5. If found → clicks "Verify" → status becomes 'paid'
-//      If not found → clicks "Reject" → customer is notified
+// KNL's orders are settled on delivery (COD), at a meet-up
+// (Laguna, Batangas, Metro Manila), or arranged via chat — none
+// are pre-paid online. Every order still gets a payment record
+// with status 'pending'. This page is where the admin:
+//   1. Opens each pending payment
+//   2. Confirms the cash was received (delivery / meet-up)
+//   3. Clicks "Verify" → status becomes 'paid'
+//      If the order can't be settled → "Reject" with a reason
 //
-// This page shows ONLY e-wallet/bank pending payments — COD
-// payments are confirmed differently (on delivery, by the courier).
+// The page lists pending COD / MEET UP / Chat payments.
 // ─────────────────────────────────────────────────────────────
 
 "use client";
@@ -166,8 +164,8 @@ export default function AdminPaymentsPage() {
   return (
     <div>
       <AdminPageHeader
-        title="Payment Verification"
-        description="Manually verify GCash, Maya, and bank transfer payments"
+        title="Payment Confirmation"
+        description="Confirm Cash on Delivery, MEET UP, and Chat order payments"
       />
 
       {/* Pending count alert */}
@@ -198,10 +196,9 @@ export default function AdminPaymentsPage() {
         <select value={methodFilter} onChange={(e) => { setMethod(e.target.value); setPage(1); }}
                 className="bg-card border border-white/10 text-[12px] text-gray-light rounded-xl px-3 py-1.5 outline-none focus:border-green-mid ml-auto">
           <option value="">All Methods</option>
-          <option value="gcash">GCash</option>
-          <option value="maya">Maya</option>
-          <option value="bank_transfer">Bank Transfer</option>
-          <option value="cod">COD</option>
+          <option value="cod">Cash on Delivery</option>
+          <option value="meet_up">MEET UP</option>
+          <option value="chat">Chat with me</option>
         </select>
       </div>
 
@@ -262,7 +259,7 @@ export default function AdminPaymentsPage() {
                         className={`${inputCls} resize-none`} rows={2}
                         placeholder={
                           action.type === "verify"   ? "Optional admin note…" :
-                          action.type === "reject"   ? "e.g. Reference number not found in GCash" :
+                          action.type === "reject"   ? "e.g. Customer didn't show up for the meet-up" :
                           "Reason for refund…"
                         }/>
             </FormField>
